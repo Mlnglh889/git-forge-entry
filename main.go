@@ -504,8 +504,7 @@ func main() {
 	if token != "" {
 		app.expectedAuth = "Bearer " + token
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", app.handle)
+	handler := http.HandlerFunc(app.handle)
 	port := os.Getenv("PORT")
 	addr := ":0"
 	if port != "" {
@@ -517,7 +516,7 @@ func main() {
 		os.Exit(1)
 	}
 	actualPort := ln.Addr().(*net.TCPAddr).Port
-	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 30 * time.Second}
+	srv := &http.Server{Handler: handler, ReadHeaderTimeout: 30 * time.Second}
 	go srv.Serve(ln)
 	env := strings.TrimRight(os.Getenv("MAKEFUN_ENV_URL"), "/")
 	if env == "" {
