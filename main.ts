@@ -1,11 +1,10 @@
-import {createApp} from './app.ts';
-const env=(process.env.MAKEFUN_ENV_URL??'').replace(/\/+$/,'');
-if(!env){process.exit(1)}
-const server=createApp();
-await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,()=>resolve())});
-const address=server.address();
-if(!address||typeof address==='string')throw new Error('no port');
-const request=async(url:string,init:RequestInit={})=>fetch(url,{...init,signal:AbortSignal.timeout(30000)});
-for(;;){try{const r=await request(`${env}/register`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({port:address.port})});if(r.status===200||r.status===409)break}catch{}await new Promise(r=>setTimeout(r,100))}
-for(;;){try{const r=await request(`${env}/done`);if(r.ok&&(await r.json()).done===true)break}catch{}await new Promise(r=>setTimeout(r,100))}
-server.closeAllConnections();server.close();
+import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {dirname, join} from 'node:path';
+// The forge is a statically linked Go binary committed beside this launcher.
+// It binds an ephemeral port, registers with MAKEFUN_ENV_URL, serves the suite,
+// and exits 0 once the suite reports completion; this launcher mirrors its exit.
+const dir=dirname(fileURLToPath(import.meta.url));
+const child=spawn(join(dir,'forge'),[],{stdio:'inherit',env:process.env});
+child.on('error',()=>process.exit(1));
+child.on('exit',(code)=>process.exit(code??0));
